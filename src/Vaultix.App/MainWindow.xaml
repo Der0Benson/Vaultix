@@ -1,0 +1,82 @@
+﻿<Window x:Class="Vaultix.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Vaultix.App"
+        mc:Ignorable="d"
+        Title="Vaultix" Height="820" Width="1320" MinHeight="680" MinWidth="1040"
+        WindowStartupLocation="CenterScreen" Background="{StaticResource BackgroundBrush}">
+    <Window.Resources>
+        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="Transparent" /><Setter Property="HorizontalContentAlignment" Value="Left" /><Setter Property="Margin" Value="0,3" /><Setter Property="Padding" Value="16,11" /><Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" /></Style>
+        <Style x:Key="Card" TargetType="Border"><Setter Property="Background" Value="{StaticResource SurfaceBrush}" /><Setter Property="CornerRadius" Value="14" /><Setter Property="Padding" Value="22" /><Setter Property="Margin" Value="0,0,14,14" /></Style>
+        <Style TargetType="ListBox"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Foreground" Value="{StaticResource TextBrush}" /></Style>
+        <Style TargetType="ListBoxItem"><Setter Property="Padding" Value="4" /><Setter Property="Margin" Value="0,2" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="226" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Background="#0E121A" BorderBrush="#202735" BorderThickness="0,0,1,0">
+            <Grid Margin="18,22"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" Margin="8,0,0,30"><Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource AccentBrush}"><TextBlock Text="V" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border><TextBlock Text="Vaultix" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" Margin="11,0,0,0" /></StackPanel>
+                <StackPanel Grid.Row="1">
+                    <Button Style="{StaticResource NavButton}" Command="{Binding NavigateCommand}" CommandParameter="Übersicht" Content="⌂   Übersicht" />
+                    <Button Style="{StaticResource NavButton}" Command="{Binding NavigateCommand}" CommandParameter="Backup" Content="▣   Backup" />
+                    <Button Style="{StaticResource NavButton}" Command="{Binding NavigateCommand}" CommandParameter="Snapshots" Content="◫   Snapshots &amp; Restore" />
+                    <Button Style="{StaticResource NavButton}" Command="{Binding NavigateCommand}" CommandParameter="Aktivität" Content="≋   Aktivität" />
+                </StackPanel>
+                <Button Grid.Row="2" Style="{StaticResource NavButton}" Command="{Binding NavigateCommand}" CommandParameter="Einstellungen" Content="⚙   Einstellungen" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Column="1"><Grid.RowDefinitions><RowDefinition Height="76" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <Border BorderBrush="#202735" BorderThickness="0,0,0,1" Padding="30,0">
+                <Grid><TextBlock Text="{Binding SelectedPage}" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"><Ellipse Width="8" Height="8" Fill="{StaticResource SuccessBrush}" Margin="0,0,8,0" /><TextBlock Text="{Binding ServerLabel}" Foreground="{StaticResource MutedBrush}" /></StackPanel></Grid>
+            </Border>
+            <Grid Grid.Row="1" Margin="30,26,20,20">
+                <Grid>
+                    <Grid.Style><Style TargetType="Grid"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding SelectedPage}" Value="Übersicht"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></Grid.Style>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+                        <Border Style="{StaticResource Card}" Padding="30" Background="#17152A"><Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding HeroTitle}" FontSize="30" FontWeight="SemiBold" /><TextBlock Text="{Binding ServiceState}" Foreground="{StaticResource MutedBrush}" FontSize="15" Margin="0,8,0,0" /><TextBlock Text="{Binding CurrentFile}" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0" TextTrimming="CharacterEllipsis" /></StackPanel><Button Grid.Column="1" Content="Backup jetzt starten" Command="{Binding BackupNowCommand}" VerticalAlignment="Center" Margin="28,0,0,0" /></Grid></Border>
+                        <WrapPanel>
+                            <Border Style="{StaticResource Card}" Width="238"><StackPanel><TextBlock Text="BACKUP HEALTH" Foreground="{StaticResource MutedBrush}" FontSize="11" /><TextBlock Text="{Binding HealthLabel}" FontSize="24" FontWeight="SemiBold" Margin="0,10,0,0" Foreground="{StaticResource SuccessBrush}" /></StackPanel></Border>
+                            <Border Style="{StaticResource Card}" Width="238"><StackPanel><TextBlock Text="LETZTES BACKUP" Foreground="{StaticResource MutedBrush}" FontSize="11" /><TextBlock Text="{Binding LastBackupLabel}" FontSize="18" FontWeight="SemiBold" Margin="0,12,0,0" /></StackPanel></Border>
+                            <Border Style="{StaticResource Card}" Width="238"><StackPanel><TextBlock Text="GESCHÜTZTE DATEIEN" Foreground="{StaticResource MutedBrush}" FontSize="11" /><TextBlock Text="{Binding ProtectedFilesLabel}" FontSize="24" FontWeight="SemiBold" Margin="0,10,0,0" /></StackPanel></Border>
+                            <Border Style="{StaticResource Card}" Width="238"><StackPanel><TextBlock Text="GESICHERT" Foreground="{StaticResource MutedBrush}" FontSize="11" /><TextBlock Text="{Binding ProtectedBytesLabel}" FontSize="24" FontWeight="SemiBold" Margin="0,10,0,0" /></StackPanel></Border>
+                        </WrapPanel>
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="3*" /><ColumnDefinition Width="2*" /></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Backup-Aktivität" FontSize="17" FontWeight="SemiBold" /><ProgressBar Height="6" Margin="0,20,0,10" Maximum="1" Value="{Binding Progress}" Foreground="{StaticResource AccentBrush}" Background="#272D39" /><TextBlock Text="{Binding PendingLabel, StringFormat={}{0} Dateien warten}" Foreground="{StaticResource MutedBrush}" /><ItemsControl ItemsSource="{Binding Activities}" Margin="0,16,0,0"><ItemsControl.ItemTemplate><DataTemplate><Grid Margin="0,7"><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Message}" /><TextBlock Grid.Column="1" Text="{Binding TimestampUtc, StringFormat={}{0:HH:mm}}" Foreground="{StaticResource MutedBrush}" /></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+                            <Border Grid.Column="1" Style="{StaticResource Card}"><StackPanel><TextBlock Text="Server" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="{Binding ServerLabel}" FontSize="26" FontWeight="SemiBold" Margin="0,22,0,2" /><TextBlock Text="{Binding ServerUrl}" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis" /><Separator Margin="0,22" Background="#303746" /><TextBlock Text="Warteschlange" Foreground="{StaticResource MutedBrush}" /><TextBlock Text="{Binding PendingLabel}" FontSize="22" Margin="0,5,0,0" /></StackPanel></Border>
+                        </Grid>
+                    </StackPanel></ScrollViewer>
+                </Grid>
+
+                <Grid>
+                    <Grid.Style><Style TargetType="Grid"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding SelectedPage}" Value="Backup"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></Grid.Style>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                    <Grid Margin="0,0,10,18"><TextBlock Text="Geschützte Ordner" FontSize="28" FontWeight="SemiBold" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Style="{StaticResource SecondaryButton}" Content="Entfernen" Command="{Binding RemoveFolderCommand}" Margin="0,0,10,0" /><Button Content="+ Ordner hinzufügen" Command="{Binding AddFolderCommand}" /></StackPanel></Grid>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}"><ListBox.ItemTemplate><DataTemplate><Border Style="{StaticResource Card}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="180" /><ColumnDefinition Width="160" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Path}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><TextBlock Text="Kontinuierlicher Schutz" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0" /></StackPanel><TextBlock Grid.Column="1" Text="{Binding Schedule}" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" /><TextBlock Grid.Column="2" Text="{Binding LastSuccessfulBackupUtc, StringFormat={}{0:g}}" VerticalAlignment="Center" /></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+                </Grid>
+
+                <Grid>
+                    <Grid.Style><Style TargetType="Grid"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding SelectedPage}" Value="Snapshots"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></Grid.Style>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="3*" /><ColumnDefinition Width="2*" /></Grid.ColumnDefinitions>
+                    <StackPanel><TextBlock Text="Snapshots" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,18" /><ListBox ItemsSource="{Binding Snapshots}" SelectedItem="{Binding SelectedSnapshot}"><ListBox.ItemTemplate><DataTemplate><Border Style="{StaticResource Card}"><Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" /><TextBlock Text="{Binding SourceRoot}" Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0" /></StackPanel><StackPanel Grid.Column="1" HorizontalAlignment="Right"><TextBlock Text="{Binding CreatedUtc, StringFormat={}{0:g}}" /><TextBlock Text="{Binding FileCount, StringFormat={}{0:N0} Dateien}" Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0" /></StackPanel></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel>
+                    <Border Grid.Column="1" Style="{StaticResource Card}" Margin="14,50,14,14" VerticalAlignment="Stretch"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions><StackPanel><TextBlock Text="Datei wiederherstellen" FontSize="20" FontWeight="SemiBold" /><TextBlock Text="Wähle eine Datei aus dem markierten Snapshot." TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" Margin="0,10,0,16" /></StackPanel><ListBox Grid.Row="1" ItemsSource="{Binding SnapshotFiles}" SelectedItem="{Binding SelectedSnapshotFile}"><ListBox.ItemTemplate><DataTemplate><Border Background="#0D111A" CornerRadius="8" Padding="11" Margin="0,2"><StackPanel><TextBlock Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding Size, StringFormat={}{0:N0} Bytes}" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,4,0,0" /></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox><StackPanel Grid.Row="2"><TextBlock Text="{Binding RestoreRelativePath}" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis" Margin="0,12,0,0" /><Button Content="Wiederherstellen…" Command="{Binding RestoreCommand}" Margin="0,12,0,0" /></StackPanel></Grid></Border>
+                </Grid>
+
+                <Grid>
+                    <Grid.Style><Style TargetType="Grid"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding SelectedPage}" Value="Aktivität"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></Grid.Style>
+                    <StackPanel><TextBlock Text="Aktivität" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,18" /><ListBox ItemsSource="{Binding Activities}"><ListBox.ItemTemplate><DataTemplate><Border Style="{StaticResource Card}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="130" /><ColumnDefinition /><ColumnDefinition Width="160" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Level}" Foreground="{StaticResource AccentBrush}" /><TextBlock Grid.Column="1" Text="{Binding Message}" /><TextBlock Grid.Column="2" Text="{Binding TimestampUtc, StringFormat={}{0:g}}" Foreground="{StaticResource MutedBrush}" /></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox></StackPanel>
+                </Grid>
+
+                <Grid>
+                    <Grid.Style><Style TargetType="Grid"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding SelectedPage}" Value="Einstellungen"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></Grid.Style>
+                    <StackPanel MaxWidth="760" HorizontalAlignment="Left"><TextBlock Text="Einstellungen" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,18" /><Border Style="{StaticResource Card}" Width="700"><StackPanel><TextBlock Text="Vaultix Server" FontSize="18" FontWeight="SemiBold" /><TextBlock Text="Im Heimnetz HTTPS verwenden; HTTP ist nur für localhost erlaubt." Foreground="{StaticResource MutedBrush}" Margin="0,7,0,18" /><TextBox Text="{Binding ServerUrl, UpdateSourceTrigger=PropertyChanged}" /><Button Content="Verbinden und Gerät koppeln" Command="{Binding ConnectServerCommand}" HorizontalAlignment="Left" Margin="0,15,0,0" /></StackPanel></Border><Border Style="{StaticResource Card}" Width="700"><StackPanel><TextBlock Text="Desktop" FontSize="18" FontWeight="SemiBold" /><CheckBox Content="Vaultix mit Windows starten und im Tray öffnen" IsChecked="{Binding StartupEnabled}" Foreground="{StaticResource TextBrush}" Margin="0,18,0,4" /><TextBlock Text="Der Vaultix Service läuft unabhängig von diesem Fenster weiter." Foreground="{StaticResource MutedBrush}" /></StackPanel></Border><TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap" Margin="4,8" /></StackPanel>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,51 @@
+# Build and IDE output
+**/[Bb]in/
+**/[Oo]bj/
+artifacts/
+publish/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.rsuser
+
+# Tests and coverage
+TestResults/
+coverage/
+coverage.*
+*.trx
+
+# Vaultix runtime state and repositories
+**/repository/
+**/restores/
+.dev/
+.smoke*/
+data/
+logs/
+*.db
+*.db-shm
+*.db-wal
+*.log
+service.json
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+secrets.json
+appsettings.Local.json
+appsettings.*.Local.json
+appsettings.Production.json
+server.env
+*.pfx
+*.p12
+*.pem
+*.key
+
+# NuGet and operating-system files
+*.nupkg
+packages/
+.DS_Store
+Thumbs.db
+Desktop.ini

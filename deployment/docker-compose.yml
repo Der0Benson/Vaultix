@@ -1,0 +1,13 @@
+services:
+  vaultix-server:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.server
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7443:8080"
+    volumes:
+      - vaultix_repository:/var/lib/vaultix
+
+volumes:
+  vaultix_repository:

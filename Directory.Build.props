@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>14.0</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+    <Version>0.1.0</Version>
+    <!-- Product namespace required by the Vaultix architecture; "Shared" is intentional. -->
+    <NoWarn>$(NoWarn);CA1716;CA1822;CA1848</NoWarn>
+  </PropertyGroup>
+</Project>
