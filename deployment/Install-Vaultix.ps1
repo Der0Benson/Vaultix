@@ -50,6 +50,12 @@ try {
     $shortcut.WorkingDirectory = $appPath
     $shortcut.Description = 'Vaultix Backup Dashboard'
     $shortcut.Save()
+
+    $installedCommit = if (Get-Command git -ErrorAction SilentlyContinue) { (& git -C $repository rev-parse HEAD).Trim() } else { '' }
+    $installationInfo = [ordered]@{ RepositoryPath = $repository; InstalledCommit = $installedCommit }
+    $dataPath = Join-Path $env:ProgramData 'Vaultix'
+    New-Item -ItemType Directory -Path $dataPath -Force | Out-Null
+    $installationInfo | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $dataPath 'installation.json') -Encoding utf8
     Start-Service -Name $serviceName
     Write-Host "Vaultix installed. Open it from the Start menu; data is stored in $env:ProgramData\Vaultix." -ForegroundColor Green
 }

@@ -17,6 +17,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 {
     private readonly VaultixIpcClient _client;
     private readonly StartupService _startup;
+    private readonly VaultixUpdateService _updates;
     private readonly CancellationTokenSource _lifetime = new();
     private string _selectedPage = "Übersicht";
     private string _serviceState = "Service wird gesucht";
@@ -48,11 +49,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private bool _settingsInitialized;
     private bool _settingsDirty;
     private bool _serverUrlInitialized;
+    private string _updateStatus = "Updates werden geprüft …";
+    private bool _updateAvailable;
 
-    public MainViewModel(VaultixIpcClient client, StartupService startup)
+    public MainViewModel(VaultixIpcClient client, StartupService startup, VaultixUpdateService? updates = null)
     {
         _client = client;
         _startup = startup;
+        _updates = updates ?? new VaultixUpdateService();
         _startupEnabled = startup.GetInitialState();
         TransferSeries =
         [
@@ -105,7 +109,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ConnectServerCommand = new AsyncRelayCommand(ConnectServerAsync, ShowError);
         RestoreCommand = new AsyncRelayCommand(RestoreAsync, ShowError, () => SelectedSnapshot is not null && !string.IsNullOrWhiteSpace(RestoreRelativePath));
         SaveProtectionSettingsCommand = new AsyncRelayCommand(SaveProtectionSettingsAsync, ShowError);
+        CheckForUpdatesCommand = new AsyncRelayCommand(CheckForUpdatesAsync, ShowError);
+        InstallUpdateCommand = new AsyncRelayCommand(InstallUpdateAsync, ShowError, () => UpdateAvailable);
         _ = ListenStatusAsync(_lifetime.Token);
+        _ = CheckForUpdatesPeriodicallyAsync(_lifetime.Token);
     }
 
     public ObservableCollection<BackupFolderDto> Folders { get; } = [];
@@ -135,6 +142,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ICommand ConnectServerCommand { get; }
     public ICommand RestoreCommand { get; }
     public ICommand SaveProtectionSettingsCommand { get; }
+    public ICommand CheckForUpdatesCommand { get; }
+    public ICommand InstallUpdateCommand { get; }
 
     public string SelectedPage { get => _selectedPage; set => Set(ref _selectedPage, value); }
     public string ServiceState { get => _serviceState; private set { if (Set(ref _serviceState, value)) Notify(nameof(HeroTitle)); } }
@@ -153,6 +162,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public int ReconciliationMinutes { get => _reconciliationMinutes; set { if (Set(ref _reconciliationMinutes, value)) _settingsDirty = true; } }
     public int SnapshotMinutes { get => _snapshotMinutes; set { if (Set(ref _snapshotMinutes, value)) _settingsDirty = true; } }
     public bool SkipUnchangedSnapshots { get => _skipUnchangedSnapshots; set { if (Set(ref _skipUnchangedSnapshots, value)) _settingsDirty = true; } }
+    public string UpdateStatus { get => _updateStatus; private set => Set(ref _updateStatus, value); }
+    public bool UpdateAvailable { get => _updateAvailable; private set { if (Set(ref _updateAvailable, value)) ((AsyncRelayCommand)InstallUpdateCommand).RaiseCanExecuteChanged(); } }
 
     public string HeroTitle => FailedFiles > 0 ? "Backup braucht Aufmerksamkeit" : PendingFiles > 0 ? $"{PendingFiles:N0} Dateien warten" : ServiceState == "Alles gesichert" ? "Dein PC ist geschützt" : ServiceState;
     public string ServerLabel => ServerOnline ? "Online" : "Offline";
@@ -375,6 +386,34 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         await SendAsync("UpdateProtectionSettings", new UpdateProtectionSettingsCommand(new ProtectionSettingsDto(
             ContinuousProtection, DebounceSeconds, ReconciliationMinutes, SnapshotMinutes, SkipUnchangedSnapshots)));
         _settingsDirty = false;
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => UpdateStatus = "Updates werden geprüft …");
+        var result = await _updates.CheckAsync(_lifetime.Token).ConfigureAwait(false);
+        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            UpdateStatus = result.Message;
+            UpdateAvailable = result.Kind == UpdateCheckResultKind.UpdateAvailable;
+        });
+    }
+
+    private async Task CheckForUpdatesPeriodicallyAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try { await CheckForUpdatesAsync().ConfigureAwait(false); }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return; }
+            catch { }
+            await Task.Delay(TimeSpan.FromHours(6), cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task InstallUpdateAsync()
+    {
+        await _updates.StartUpdateAsync().ConfigureAwait(false);
+        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => System.Windows.Application.Current.Shutdown());
     }
 
     private async Task RestoreAsync()
