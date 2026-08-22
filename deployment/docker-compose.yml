@@ -31,6 +31,7 @@ services:
       VAULTIX_TLS_HOST: ${VAULTIX_TLS_HOST:?Set VAULTIX_TLS_HOST in .env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./tls:/etc/caddy/tls:ro
       - vaultix_caddy_data:/data
       - vaultix_caddy_config:/config
     depends_on:

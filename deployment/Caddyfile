@@ -1,4 +1,4 @@
 {$VAULTIX_TLS_HOST} {
-    tls internal
+    tls /etc/caddy/tls/vaultix.crt /etc/caddy/tls/vaultix.key
     reverse_proxy vaultix-server:8080
 }

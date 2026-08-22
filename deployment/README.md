@@ -9,21 +9,24 @@ git clone <dein-vaultix-repository> vaultix
 cd vaultix/deployment
 cp .env.example .env
 sudo nano .env # VAULTIX_TLS_HOST auf die LAN-IP oder den DNS-Namen dieses Servers setzen
+mkdir -p tls
+openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 3650 \
+  -keyout tls/vaultix.key -out tls/vaultix.crt \
+  -subj "/CN=<VAULTIX_TLS_HOST>" \
+  -addext "subjectAltName = IP:<VAULTIX_TLS_HOST>" \
+  -addext "keyUsage = critical,digitalSignature,keyEncipherment" \
+  -addext "extendedKeyUsage = serverAuth"
+chmod 600 tls/vaultix.key
 docker compose up -d --build
 docker compose ps
 ```
 
-Caddy erstellt eine lokale Zertifizierungsstelle. Fuer den Windows-PC einmalig das Stammzertifikat exportieren und als vertrauenswuerdiges Stammzertifikat importieren:
+Caddy verwendet ein lokales RSA-Zertifikat. Fuer den Windows-PC die Zertifikatsdatei `tls/vaultix.crt` uebertragen und als vertrauenswuerdiges Stammzertifikat importieren:
 
-```bash
-docker compose cp vaultix-proxy:/data/caddy/pki/authorities/local/root.crt ./vaultix-local-ca.crt
-curl --cacert ./vaultix-local-ca.crt https://<VAULTIX_TLS_HOST>/api/v1/health
-```
-
-Die Datei auf den Windows-PC uebertragen und dort in einer PowerShell **als Administrator** importieren:
+In einer PowerShell **als Administrator**:
 
 ```powershell
-certutil -addstore -f Root .\vaultix-local-ca.crt
+certutil -addstore -f Root .\vaultix.crt
 ```
 
 Danach wird in Vaultix als Server-Adresse `https://<VAULTIX_TLS_HOST>` verwendet.
