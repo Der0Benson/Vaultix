@@ -12,14 +12,7 @@ public sealed class NamedPipeStatusServer(BackupCoordinator coordinator, ILogger
         {
             try
             {
-                await using var pipe = new NamedPipeServerStream(
-                    VaultixProtocol.StatusPipeName,
-                    PipeDirection.Out,
-                    1,
-                    PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous,
-                    0,
-                    128 * 1024);
+                await using var pipe = VaultixPipeServer.CreateStatusPipe();
                 await pipe.WaitForConnectionAsync(stoppingToken).ConfigureAwait(false);
                 await using var writer = new StreamWriter(pipe, leaveOpen: true) { AutoFlush = true };
                 using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));

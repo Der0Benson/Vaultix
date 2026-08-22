@@ -10,14 +10,7 @@ public sealed class NamedPipeIpcServer(BackupCoordinator coordinator, ILogger<Na
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            await using var pipe = new NamedPipeServerStream(
-                VaultixProtocol.PipeName,
-                PipeDirection.InOut,
-                NamedPipeServerStream.MaxAllowedServerInstances,
-                PipeTransmissionMode.Byte,
-                PipeOptions.Asynchronous,
-                inBufferSize: 64 * 1024,
-                outBufferSize: 64 * 1024);
+            await using var pipe = VaultixPipeServer.CreateCommandPipe();
             await pipe.WaitForConnectionAsync(stoppingToken).ConfigureAwait(false);
             await HandleConnectionAsync(pipe, stoppingToken).ConfigureAwait(false);
         }
