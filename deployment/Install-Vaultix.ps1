@@ -31,11 +31,14 @@ try {
     $serviceExecutable = Join-Path $servicePath 'Vaultix.Service.exe'
     if (-not (Test-Path -LiteralPath $serviceExecutable)) { throw "Service executable was not published: $serviceExecutable" }
     if (-not $existingService) {
-        & sc.exe create $serviceName "binPath= `"$serviceExecutable`"" 'start= auto' 'DisplayName= Vaultix Service'
+        # sc.exe requires the option name, equals sign, and value as separate
+        # command-line arguments. Passing "binPath= value" as one PowerShell
+        # string makes sc.exe print its usage text instead of creating a service.
+        & sc.exe create $serviceName binPath= "`"$serviceExecutable`"" start= auto DisplayName= 'Vaultix Service'
         if ($LASTEXITCODE -ne 0) { throw 'Could not register Vaultix Service.' }
     }
     else {
-        & sc.exe config $serviceName "binPath= `"$serviceExecutable`"" 'start= auto'
+        & sc.exe config $serviceName binPath= "`"$serviceExecutable`"" start= auto
         if ($LASTEXITCODE -ne 0) { throw 'Could not update Vaultix Service.' }
     }
     & sc.exe description $serviceName 'Vaultix continuous backup, snapshot and recovery service'
