@@ -174,6 +174,12 @@ public sealed class BackupCoordinator(
         {
             try
             {
+                // A paired device must reconnect on its own after Windows or
+                // the desktop app restarts. Mark it online as soon as the
+                // persisted endpoint responds; the loop below keeps retrying
+                // if the network is not ready yet.
+                await server.GetHealthAsync(cancellationToken).ConfigureAwait(false);
+                state.SetServer(true);
                 var startupSnapshots = await server.ListSnapshotsAsync(cancellationToken).ConfigureAwait(false);
                 if (startupSnapshots.Count == 0 && await queue.HasFileVersionsAsync(cancellationToken).ConfigureAwait(false))
                 {
@@ -184,6 +190,7 @@ public sealed class BackupCoordinator(
                 }
                 state.SetSnapshots(startupSnapshots);
                 SetSnapshotSchedule(startupConfiguration, startupSnapshots);
+                state.AddActivity("Success", "Gespeicherte Serververbindung automatisch wiederhergestellt");
             }
             catch (HttpRequestException) { state.SetServer(false); }
         }
