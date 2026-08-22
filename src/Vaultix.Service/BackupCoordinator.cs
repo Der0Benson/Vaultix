@@ -175,6 +175,13 @@ public sealed class BackupCoordinator(
             try
             {
                 var startupSnapshots = await server.ListSnapshotsAsync(cancellationToken).ConfigureAwait(false);
+                if (startupSnapshots.Count == 0 && await queue.HasFileVersionsAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    await queue.ResetForServerChangeAsync(cancellationToken).ConfigureAwait(false);
+                    state.SetNextSnapshot(null);
+                    RequestFullRescan(startupConfiguration);
+                    state.AddActivity("Info", "Leerer Server erkannt; veraltete lokale Objektverweise wurden zurueckgesetzt");
+                }
                 state.SetSnapshots(startupSnapshots);
                 SetSnapshotSchedule(startupConfiguration, startupSnapshots);
             }
