@@ -29,7 +29,7 @@
         <Grid.ColumnDefinitions><ColumnDefinition Width="226" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
         <Border Grid.Column="0" Background="#0E121A" BorderBrush="#202735" BorderThickness="0,0,1,0">
             <Grid Margin="18,22"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                <StackPanel Orientation="Horizontal" Margin="8,0,0,30"><Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource AccentBrush}"><TextBlock Text="V" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border><TextBlock Text="Vaultix" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" Margin="11,0,0,0" /></StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="8,0,0,30"><Image Source="Assets/vaultix-icon.png" Width="34" Height="34" Stretch="Uniform" /><TextBlock Text="Vaultix" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" Margin="11,0,0,0" /></StackPanel>
                 <StackPanel Grid.Row="1">
                     <Button Style="{StaticResource NavButton}" Command="{Binding NavigateCommand}" CommandParameter="Übersicht" Content="⌂   Übersicht" />
                     <Button Style="{StaticResource NavButton}" Command="{Binding NavigateCommand}" CommandParameter="Backup" Content="▣   Backup" />
