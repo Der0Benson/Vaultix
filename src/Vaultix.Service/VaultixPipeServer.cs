@@ -25,7 +25,10 @@ internal static class VaultixPipeServer
         1,
         0,
         128 * 1024,
-        PipeAccessRights.ReadData);
+        // PipeAccessRights.ReadData alone is not sufficient for a client to
+        // connect to a service-owned output pipe on Windows. Read includes the
+        // associated attributes and synchronization rights required by the OS.
+        PipeAccessRights.Read);
 
     private static NamedPipeServerStream Create(
         string name,
