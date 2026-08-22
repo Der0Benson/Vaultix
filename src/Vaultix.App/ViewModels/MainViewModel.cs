@@ -47,6 +47,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private bool _skipUnchangedSnapshots = true;
     private bool _settingsInitialized;
     private bool _settingsDirty;
+    private bool _serverUrlInitialized;
 
     public MainViewModel(VaultixIpcClient client, StartupService startup)
     {
@@ -286,7 +287,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         ServiceState = status.State;
         ServerOnline = status.ServerOnline;
-        if (!string.IsNullOrWhiteSpace(status.ServerUrl)) ServerUrl = status.ServerUrl;
+        if (!_serverUrlInitialized && !string.IsNullOrWhiteSpace(status.ServerUrl))
+        {
+            ServerUrl = status.ServerUrl;
+            _serverUrlInitialized = true;
+        }
         PendingFiles = status.PendingFiles;
         FailedFiles = status.FailedFiles;
         ProtectedFiles = status.ProtectedFiles;
