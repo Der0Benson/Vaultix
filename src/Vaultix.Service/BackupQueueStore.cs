@@ -632,6 +632,14 @@ public sealed class BackupQueueStore(VaultixPaths paths)
         return new QueueStatistics(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt64(2), reader.GetInt64(3));
     }
 
+    public async Task<bool> HasFileVersionsAsync(CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT EXISTS(SELECT 1 FROM file_versions);";
+        return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture) != 0;
+    }
+
     public async Task<FolderStatistics> GetFolderStatisticsAsync(string rootPath, CancellationToken cancellationToken)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);

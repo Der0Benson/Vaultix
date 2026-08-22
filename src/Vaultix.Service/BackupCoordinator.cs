@@ -44,7 +44,15 @@ public sealed class BackupCoordinator(
             {
                 try
                 {
-                    state.SetSnapshots(await server.ListSnapshotsAsync(cancellationToken).ConfigureAwait(false));
+                    var snapshots = await server.ListSnapshotsAsync(cancellationToken).ConfigureAwait(false);
+                    if (snapshots.Count == 0 && await queue.HasFileVersionsAsync(cancellationToken).ConfigureAwait(false))
+                    {
+                        await queue.ResetForServerChangeAsync(cancellationToken).ConfigureAwait(false);
+                        state.SetNextSnapshot(null);
+                        RequestFullRescan(current);
+                        state.AddActivity("Info", "Leerer Server erkannt â€“ Dateien werden vollstÃ¤ndig abgeglichen");
+                    }
+                    state.SetSnapshots(snapshots);
                     state.SetServer(true);
                     state.AddActivity("Success", "Vaultix Server verbunden");
                     return;
@@ -67,7 +75,7 @@ public sealed class BackupCoordinator(
             server.Configure(uri, new DeviceCredentials(pairing.DeviceId, pairing.DeviceSecret));
             state.SetSnapshots([]);
             state.SetNextSnapshot(null);
-            foreach (var folder in updated.Folders.Where(folder => folder.Enabled)) RequestBackup(folder.Id);
+            RequestFullRescan(updated);
             state.SetServer(true);
             state.AddActivity("Info", "Server gewechselt â€“ Dateien werden vollstÃ¤ndig abgeglichen");
             state.AddActivity("Success", "Vaultix Server verbunden");
@@ -354,6 +362,11 @@ public sealed class BackupCoordinator(
         state.SetStatistics(statistics);
         metrics.SetQueueLength(statistics.Pending);
         state.SetRecentSessions(await queue.GetRecentSessionsAsync(30, cancellationToken).ConfigureAwait(false));
+    }
+
+    private void RequestFullRescan(ServiceConfiguration configuration)
+    {
+        foreach (var folder in configuration.Folders.Where(folder => folder.Enabled)) RequestBackup(folder.Id);
     }
 
     private async Task<ServiceConfiguration?> ConfigureClientAsync(CancellationToken cancellationToken)
