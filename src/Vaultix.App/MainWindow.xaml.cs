@@ -33,6 +33,8 @@ public partial class MainWindow : Window, IDisposable
         _viewModel = viewModel;
         InitializeComponent();
         DataContext = viewModel;
+        SourceInitialized += (_, _) => EnableDarkTitleBar();
+        Loaded += (_, _) => DashboardScrollViewer.ScrollToTop();
         var menu = new System.Windows.Forms.ContextMenuStrip();
         menu.Items.Add("Vaultix öffnen", null, (_, _) => ShowFromTray());
         menu.Items.Add("Backup jetzt starten", null, (_, _) => viewModel.BackupNowCommand.Execute(null));
@@ -161,4 +163,17 @@ public partial class MainWindow : Window, IDisposable
     [System.Runtime.InteropServices.LibraryImport("user32.dll", SetLastError = true)]
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
     private static partial bool DestroyIcon(nint iconHandle);
+
+    private void EnableDarkTitleBar()
+    {
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var enabled = 1;
+        if (DwmSetWindowAttribute(handle, 20, ref enabled, sizeof(int)) != 0)
+        {
+            _ = DwmSetWindowAttribute(handle, 19, ref enabled, sizeof(int));
+        }
+    }
+
+    [System.Runtime.InteropServices.LibraryImport("dwmapi.dll")]
+    private static partial int DwmSetWindowAttribute(nint windowHandle, int attribute, ref int value, int size);
 }

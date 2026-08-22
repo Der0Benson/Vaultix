@@ -47,10 +47,11 @@ public sealed class VaultixServerClient(HttpClient httpClient)
         return result is not null && !result.MissingHashes.Contains(hash, StringComparer.OrdinalIgnoreCase);
     }
 
-    public async Task UploadAsync(string hash, string path, CancellationToken cancellationToken)
+    public async Task UploadAsync(string hash, string path, CancellationToken cancellationToken, Action<long>? progress = null)
     {
         await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
-        var content = new StreamContent(file);
+        await using var measured = new ProgressReadStream(file, progress);
+        var content = new StreamContent(measured);
         content.Headers.ContentLength = file.Length;
         content.Headers.ContentType = new("application/octet-stream");
         using var request = CreateRequest(HttpMethod.Put, $"{VaultixProtocol.ApiPrefix}/objects/{hash}", content);
@@ -84,7 +85,7 @@ public sealed class VaultixServerClient(HttpClient httpClient)
             ?? throw new InvalidDataException("Der Server lieferte keine Snapshot-Details.");
     }
 
-    public async Task RestoreAsync(Guid snapshotId, string relativePath, string destinationPath, CancellationToken cancellationToken)
+    public async Task RestoreAsync(Guid snapshotId, string relativePath, string destinationPath, CancellationToken cancellationToken, Action<long>? progress = null)
     {
         var url = $"{VaultixProtocol.ApiPrefix}/snapshots/{snapshotId:D}/files?path={Uri.EscapeDataString(relativePath)}";
         using var request = CreateRequest(HttpMethod.Get, url);
@@ -100,11 +101,47 @@ public sealed class VaultixServerClient(HttpClient httpClient)
         await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
         await using (var destination = new FileStream(temporaryPath, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
         {
-            await source.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
+            var buffer = new byte[1024 * 1024];
+            int read;
+            while ((read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+            {
+                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                progress?.Invoke(read);
+            }
             await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
 
         File.Move(temporaryPath, destinationPath, overwrite: true);
+    }
+
+    private sealed class ProgressReadStream(Stream inner, Action<long>? progress) : Stream
+    {
+        public override bool CanRead => inner.CanRead;
+        public override bool CanSeek => inner.CanSeek;
+        public override bool CanWrite => false;
+        public override long Length => inner.Length;
+        public override long Position { get => inner.Position; set => inner.Position = value; }
+        public override void Flush() => inner.Flush();
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var read = inner.Read(buffer, offset, count);
+            if (read > 0) progress?.Invoke(read);
+            return read;
+        }
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            var read = await inner.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+            if (read > 0) progress?.Invoke(read);
+            return read;
+        }
+        public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) inner.Dispose();
+            base.Dispose(disposing);
+        }
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)

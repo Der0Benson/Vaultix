@@ -14,7 +14,10 @@ public sealed class ServerEndToEndTests : IDisposable
     public async Task HttpApiPairsUploadsSnapshotsAndRestoresExactBytes()
     {
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-            builder.UseSetting("Vaultix:RepositoryPath", _repositoryPath));
+        {
+            builder.UseSetting("Vaultix:RepositoryPath", _repositoryPath);
+            builder.UseSetting("Vaultix:PairingEnabled", "true");
+        });
         using var client = factory.CreateClient();
         var cancellationToken = CancellationToken.None;
 
@@ -45,6 +48,21 @@ public sealed class ServerEndToEndTests : IDisposable
         using var restored = await client.GetAsync($"/api/v1/snapshots/{snapshot.Id:D}/files?path={Uri.EscapeDataString(entry.RelativePath)}", cancellationToken);
         restored.EnsureSuccessStatusCode();
         Assert.Equal(original, await restored.Content.ReadAsByteArrayAsync(cancellationToken));
+    }
+
+    [Fact]
+    public async Task PairingEndpointIsUnavailableWhenExplicitlyDisabled()
+    {
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("Vaultix:RepositoryPath", _repositoryPath);
+            builder.UseSetting("Vaultix:PairingEnabled", "false");
+        });
+        using var client = factory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync("/api/v1/devices/pair", new PairDeviceRequest("integration-pc"));
+
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
     }
 
     public void Dispose()

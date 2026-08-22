@@ -1,11 +1,35 @@
 services:
   vaultix-server:
+    image: vaultix-server:local
     build:
       context: ..
       dockerfile: deployment/Dockerfile.server
     restart: unless-stopped
     ports:
-      - "127.0.0.1:7443:8080"
+      - "127.0.0.1:${VAULTIX_HTTP_PORT:-7443}:8080"
+    environment:
+      Vaultix__PairingEnabled: ${VAULTIX_PAIRING_ENABLED:-false}
+    volumes:
+      - vaultix_repository:/var/lib/vaultix
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      vaultix-permissions:
+        condition: service_completed_successfully
+
+  vaultix-permissions:
+    image: vaultix-server:local
+    user: "0:0"
+    restart: "no"
+    entrypoint: ["/bin/sh", "-ec"]
+    command: >
+      mkdir -p /var/lib/vaultix
+      && chown 1654:1654 /var/lib/vaultix
     volumes:
       - vaultix_repository:/var/lib/vaultix
 

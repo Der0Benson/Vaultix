@@ -61,6 +61,9 @@ public sealed class NamedPipeIpcServer(BackupCoordinator coordinator, ILogger<Na
             case "RunBackup":
                 coordinator.RequestBackup();
                 return IpcResponse.Ok();
+            case "UpdateProtectionSettings":
+                await coordinator.UpdateProtectionSettingsAsync(GetPayload<UpdateProtectionSettingsCommand>(request), cancellationToken).ConfigureAwait(false);
+                return IpcResponse.Ok();
             case "RestoreFile":
                 return IpcResponse.Ok(await coordinator.RestoreAsync(GetPayload<RestoreFileCommand>(request), cancellationToken).ConfigureAwait(false));
             case "GetSnapshotDetails":

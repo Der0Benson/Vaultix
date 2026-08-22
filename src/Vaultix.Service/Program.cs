@@ -17,10 +17,13 @@ builder.Services.AddSingleton(new HttpClient(new SocketsHttpHandler
     ConnectTimeout = TimeSpan.FromSeconds(10)
 }) { Timeout = Timeout.InfiniteTimeSpan });
 builder.Services.AddSingleton<VaultixServerClient>();
+builder.Services.AddSingleton<VaultixMetricsService>();
 builder.Services.AddSingleton<BackupCoordinator>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<VaultixMetricsService>());
 builder.Services.AddHostedService<Worker>();
 builder.Services.AddHostedService<FileChangeMonitor>();
 builder.Services.AddHostedService<NamedPipeIpcServer>();
+builder.Services.AddHostedService<NamedPipeStatusServer>();
 
 var host = builder.Build();
 await host.RunAsync();

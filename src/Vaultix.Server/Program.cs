@@ -8,6 +8,7 @@ var repositoryPath = builder.Configuration["Vaultix:RepositoryPath"]
     ?? Environment.GetEnvironmentVariable("VAULTIX_REPOSITORY")
     ?? Path.Combine(AppContext.BaseDirectory, "repository");
 var maximumUploadBytes = builder.Configuration.GetValue<long?>("Vaultix:MaximumUploadBytes") ?? 512L * 1024 * 1024 * 1024;
+var pairingEnabled = builder.Configuration.GetValue<bool?>("Vaultix:PairingEnabled") ?? builder.Environment.IsDevelopment();
 
 builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = maximumUploadBytes);
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = maximumUploadBytes);
@@ -36,7 +37,9 @@ api.MapGet("/health", (VaultixRepository store) => Results.Ok(new HealthResponse
     "healthy", typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "0.1.0", Directory.Exists(store.RootPath), store.GetAvailableBytes())));
 
 api.MapPost("/devices/pair", async (PairDeviceRequest request, VaultixRepository store, CancellationToken cancellationToken) =>
-    Results.Ok(await store.PairDeviceAsync(request.DeviceName, cancellationToken)));
+    pairingEnabled
+        ? Results.Ok(await store.PairDeviceAsync(request.DeviceName, cancellationToken))
+        : Results.NotFound());
 
 api.MapPost("/objects/check", async (HttpContext context, ObjectCheckRequest request, VaultixRepository store, CancellationToken cancellationToken) =>
 {

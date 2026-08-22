@@ -56,7 +56,8 @@ public sealed class VaultixRepository
                 source_root TEXT NOT NULL,
                 created_utc TEXT NOT NULL,
                 file_count INTEGER NOT NULL,
-                total_bytes INTEGER NOT NULL
+                total_bytes INTEGER NOT NULL,
+                is_checkpoint INTEGER NOT NULL DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS snapshot_entries (
                 snapshot_id TEXT NOT NULL REFERENCES snapshots(id),
@@ -72,6 +73,7 @@ public sealed class VaultixRepository
             CREATE INDEX IF NOT EXISTS ix_entries_object ON snapshot_entries(object_hash);
             """;
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        await EnsureColumnAsync(connection, "snapshots", "is_checkpoint", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<PairDeviceResponse> PairDeviceAsync(string deviceName, CancellationToken cancellationToken)
@@ -151,7 +153,8 @@ public sealed class VaultixRepository
             request.SourceRoot,
             DateTimeOffset.UtcNow,
             entries.Length,
-            entries.Sum(entry => entry.Size));
+            entries.Sum(entry => entry.Size),
+            request.IsCheckpoint);
 
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
@@ -170,7 +173,7 @@ public sealed class VaultixRepository
         await using (var insertSnapshot = connection.CreateCommand())
         {
             insertSnapshot.Transaction = (SqliteTransaction)transaction;
-            insertSnapshot.CommandText = "INSERT INTO snapshots(id,device_id,name,source_root,created_utc,file_count,total_bytes) VALUES($id,$device,$name,$root,$created,$count,$bytes);";
+            insertSnapshot.CommandText = "INSERT INTO snapshots(id,device_id,name,source_root,created_utc,file_count,total_bytes,is_checkpoint) VALUES($id,$device,$name,$root,$created,$count,$bytes,$checkpoint);";
             insertSnapshot.Parameters.AddWithValue("$id", snapshot.Id.ToString("D"));
             insertSnapshot.Parameters.AddWithValue("$device", deviceId.ToString("D"));
             insertSnapshot.Parameters.AddWithValue("$name", snapshot.Name);
@@ -178,6 +181,7 @@ public sealed class VaultixRepository
             insertSnapshot.Parameters.AddWithValue("$created", snapshot.CreatedUtc.ToString("O"));
             insertSnapshot.Parameters.AddWithValue("$count", snapshot.FileCount);
             insertSnapshot.Parameters.AddWithValue("$bytes", snapshot.TotalBytes);
+            insertSnapshot.Parameters.AddWithValue("$checkpoint", snapshot.IsCheckpoint ? 1 : 0);
             await insertSnapshot.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
@@ -205,14 +209,14 @@ public sealed class VaultixRepository
         var snapshots = new List<SnapshotResponse>();
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT id,name,source_root,created_utc,file_count,total_bytes FROM snapshots WHERE device_id=$device ORDER BY created_utc DESC;";
+        command.CommandText = "SELECT id,name,source_root,created_utc,file_count,total_bytes,is_checkpoint FROM snapshots WHERE device_id=$device AND is_checkpoint=0 ORDER BY created_utc DESC;";
         command.Parameters.AddWithValue("$device", deviceId.ToString("D"));
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
             snapshots.Add(new SnapshotResponse(
                 Guid.Parse(reader.GetString(0)), reader.GetString(1), reader.GetString(2),
-                DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture), reader.GetInt32(4), reader.GetInt64(5)));
+                DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture), reader.GetInt32(4), reader.GetInt64(5), reader.GetInt32(6) != 0));
         }
 
         return snapshots;
@@ -225,7 +229,7 @@ public sealed class VaultixRepository
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         await using (var snapshotCommand = connection.CreateCommand())
         {
-            snapshotCommand.CommandText = "SELECT id,name,source_root,created_utc,file_count,total_bytes FROM snapshots WHERE id=$id AND device_id=$device;";
+            snapshotCommand.CommandText = "SELECT id,name,source_root,created_utc,file_count,total_bytes,is_checkpoint FROM snapshots WHERE id=$id AND device_id=$device;";
             snapshotCommand.Parameters.AddWithValue("$id", snapshotId.ToString("D"));
             snapshotCommand.Parameters.AddWithValue("$device", deviceId.ToString("D"));
             await using var reader = await snapshotCommand.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -235,7 +239,7 @@ public sealed class VaultixRepository
             }
 
             snapshot = new SnapshotResponse(Guid.Parse(reader.GetString(0)), reader.GetString(1), reader.GetString(2),
-                DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture), reader.GetInt32(4), reader.GetInt64(5));
+                DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture), reader.GetInt32(4), reader.GetInt64(5), reader.GetInt32(6) != 0);
         }
 
         await using (var entriesCommand = connection.CreateCommand())
@@ -291,6 +295,21 @@ public sealed class VaultixRepository
         pragma.CommandText = "PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;";
         await pragma.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         return connection;
+    }
+
+    private static async Task EnsureColumnAsync(SqliteConnection connection, string table, string column, string definition, CancellationToken cancellationToken)
+    {
+        await using var inspect = connection.CreateCommand();
+        inspect.CommandText = $"PRAGMA table_info({table});";
+        await using var reader = await inspect.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            if (reader.GetString(1).Equals(column, StringComparison.OrdinalIgnoreCase)) return;
+        }
+        await reader.DisposeAsync().ConfigureAwait(false);
+        await using var alter = connection.CreateCommand();
+        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition};";
+        await alter.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static SnapshotEntryDto ValidateEntry(SnapshotEntryDto entry)

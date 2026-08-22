@@ -1,12 +1,27 @@
 using System.IO.Pipes;
 using System.Text.Json;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Vaultix.Shared;
 
 namespace Vaultix.App.Services;
 
 public sealed class VaultixIpcClient
 {
+    public async IAsyncEnumerable<ServiceStatusDto> StreamStatusAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        await using var pipe = new NamedPipeClientStream(".", VaultixProtocol.StatusPipeName, PipeDirection.In, PipeOptions.Asynchronous);
+        await pipe.ConnectAsync(cancellationToken).ConfigureAwait(false);
+        using var reader = new StreamReader(pipe, leaveOpen: true);
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+            if (line is null) yield break;
+            yield return JsonSerializer.Deserialize<ServiceStatusDto>(line, VaultixProtocol.Json)
+                ?? throw new InvalidDataException("Vaultix Service lieferte ungültige Statusdaten.");
+        }
+    }
+
     public async Task<T> SendAsync<T>(string command, object? payload = null, CancellationToken cancellationToken = default)
     {
         var response = await SendCoreAsync(command, payload, cancellationToken).ConfigureAwait(false);

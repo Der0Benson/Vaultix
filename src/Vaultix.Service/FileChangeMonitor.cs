@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace Vaultix.Service;
 
 public sealed class FileChangeMonitor(
@@ -8,29 +6,31 @@ public sealed class FileChangeMonitor(
     ILogger<FileChangeMonitor> logger) : BackgroundService
 {
     private readonly Dictionary<Guid, FileSystemWatcher> _watchers = [];
-    private readonly ConcurrentDictionary<Guid, DateTimeOffset> _changes = new();
+    private readonly ChangeDebouncer _changes = new();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        DateTimeOffset? lastControlScan = null;
         var nextControlScan = DateTimeOffset.UtcNow;
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
         {
             await SynchronizeWatchersAsync(stoppingToken).ConfigureAwait(false);
+            var configuration = await configurationStore.LoadAsync(stoppingToken).ConfigureAwait(false);
+            var settings = configuration.EffectiveProtection;
             var now = DateTimeOffset.UtcNow;
-            foreach (var change in _changes.ToArray())
+            if (settings.ContinuousProtection)
             {
-                if (now - change.Value >= TimeSpan.FromSeconds(10) && _changes.TryRemove(change.Key, out _))
-                {
-                    coordinator.RequestBackup(change.Key);
-                }
+                foreach (var folderId in _changes.DequeueDue(now, TimeSpan.FromSeconds(settings.DebounceSeconds))) coordinator.RequestBackup(folderId);
             }
 
             if (now >= nextControlScan)
             {
                 coordinator.RequestBackup();
-                nextControlScan = now + TimeSpan.FromHours(1);
+                lastControlScan = now;
+                nextControlScan = now + TimeSpan.FromMinutes(settings.ReconciliationMinutes);
             }
+            coordinator.SetReconciliationSchedule(lastControlScan, nextControlScan);
         }
     }
 
@@ -47,7 +47,9 @@ public sealed class FileChangeMonitor(
     private async Task SynchronizeWatchersAsync(CancellationToken cancellationToken)
     {
         var configuration = await configurationStore.LoadAsync(cancellationToken).ConfigureAwait(false);
-        var wanted = configuration.Folders.Where(folder => folder.Enabled && Directory.Exists(folder.Path)).ToDictionary(folder => folder.Id);
+        var wanted = configuration.EffectiveProtection.ContinuousProtection
+            ? configuration.Folders.Where(folder => folder.Enabled && Directory.Exists(folder.Path)).ToDictionary(folder => folder.Id)
+            : [];
         foreach (var obsolete in _watchers.Keys.Except(wanted.Keys).ToArray())
         {
             _watchers[obsolete].Dispose();
@@ -83,5 +85,5 @@ public sealed class FileChangeMonitor(
         }
     }
 
-    private void MarkChanged(Guid folderId) => _changes[folderId] = DateTimeOffset.UtcNow;
+    private void MarkChanged(Guid folderId) => _changes.Mark(folderId, DateTimeOffset.UtcNow);
 }

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Vaultix.Infrastructure;
+using Vaultix.Shared;
 
 namespace Vaultix.Service;
 
@@ -9,12 +10,47 @@ public sealed record ServiceConfiguration(
     string? ServerUrl,
     Guid? DeviceId,
     string? ProtectedDeviceSecret,
-    List<BackupFolderConfiguration> Folders)
+    List<BackupFolderConfiguration> Folders,
+    ProtectionSettingsConfiguration? Protection = null)
 {
     public static ServiceConfiguration Empty { get; } = new(null, null, null, []);
+
+    public ProtectionSettingsConfiguration EffectiveProtection => Protection ?? ProtectionSettingsConfiguration.Default;
 }
 
-public sealed record BackupFolderConfiguration(Guid Id, string Path, bool Enabled, string Schedule, DateTimeOffset? LastSuccessfulBackupUtc);
+public sealed record BackupFolderConfiguration(
+    Guid Id,
+    string Path,
+    bool Enabled,
+    string Schedule,
+    DateTimeOffset? LastSuccessfulBackupUtc,
+    DateTimeOffset? LastScanUtc = null,
+    long FileCount = 0,
+    long TotalBytes = 0);
+
+public sealed record ProtectionSettingsConfiguration(
+    bool ContinuousProtection,
+    int DebounceSeconds,
+    int ReconciliationMinutes,
+    int SnapshotMinutes,
+    bool SkipUnchangedSnapshots)
+{
+    public static ProtectionSettingsConfiguration Default { get; } = new(true, 10, 30, 30, true);
+
+    public ProtectionSettingsDto ToDto() => new(
+        ContinuousProtection,
+        DebounceSeconds,
+        ReconciliationMinutes,
+        SnapshotMinutes,
+        SkipUnchangedSnapshots);
+
+    public static ProtectionSettingsConfiguration FromDto(ProtectionSettingsDto settings) => new(
+        settings.ContinuousProtection,
+        Math.Clamp(settings.DebounceSeconds, 1, 300),
+        Math.Clamp(settings.ReconciliationMinutes, 1, 24 * 60),
+        Math.Clamp(settings.SnapshotMinutes, 1, 7 * 24 * 60),
+        settings.SkipUnchangedSnapshots);
+}
 
 public sealed class VaultixPaths
 {
