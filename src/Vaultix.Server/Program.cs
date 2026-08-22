@@ -4,8 +4,8 @@ using Vaultix.Shared;
 using Vaultix.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
-var repositoryPath = builder.Configuration["Vaultix:RepositoryPath"]
-    ?? Environment.GetEnvironmentVariable("VAULTIX_REPOSITORY")
+var repositoryPath = Environment.GetEnvironmentVariable("VAULTIX_REPOSITORY")
+    ?? builder.Configuration["Vaultix:RepositoryPath"]
     ?? Path.Combine(AppContext.BaseDirectory, "repository");
 var maximumUploadBytes = builder.Configuration.GetValue<long?>("Vaultix:MaximumUploadBytes") ?? 512L * 1024 * 1024 * 1024;
 var pairingEnabled = builder.Configuration.GetValue<bool?>("Vaultix:PairingEnabled") ?? builder.Environment.IsDevelopment();
