@@ -27,9 +27,7 @@ services:
     user: "0:0"
     restart: "no"
     entrypoint: ["/bin/sh", "-ec"]
-    command: >
-      mkdir -p /var/lib/vaultix
-      && chown 1654:1654 /var/lib/vaultix
+    command: ["mkdir -p /var/lib/vaultix && chown 1654:1654 /var/lib/vaultix"]
     volumes:
       - vaultix_repository:/var/lib/vaultix
 
