@@ -22,6 +22,21 @@ services:
       vaultix-permissions:
         condition: service_completed_successfully
 
+  vaultix-proxy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    ports:
+      - "${VAULTIX_HTTPS_PORT:-443}:443"
+    environment:
+      VAULTIX_TLS_HOST: ${VAULTIX_TLS_HOST:?Set VAULTIX_TLS_HOST in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - vaultix_caddy_data:/data
+      - vaultix_caddy_config:/config
+    depends_on:
+      vaultix-server:
+        condition: service_healthy
+
   vaultix-permissions:
     image: vaultix-server:local
     user: "0:0"
@@ -33,3 +48,5 @@ services:
 
 volumes:
   vaultix_repository:
+  vaultix_caddy_data:
+  vaultix_caddy_config:

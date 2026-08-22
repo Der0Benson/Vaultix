@@ -1,0 +1,4 @@
+{$VAULTIX_TLS_HOST} {
+    tls internal
+    reverse_proxy vaultix-server:8080
+}
