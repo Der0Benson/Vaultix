@@ -44,4 +44,15 @@ docker compose logs -f vaultix-server
 docker compose up -d --build
 ```
 
+## Updates
+
+Updates sind absichtlich manuell. Das Skript zieht nur einen schnellen Vorlauf von `main`, verweigert lokale Aenderungen und baut die Container anschliessend neu:
+
+```bash
+cd ~/vaultix
+bash deployment/update-server.sh
+```
+
+Das Repository-Volume und die lokale `.env` werden dabei nicht veraendert.
+
 Vor Updates das Volume sichern. Eine Sicherung muss das gesamte Repository einschliesslich der SQLite-Dateien und des `objects`-Verzeichnisses enthalten. Pairing sollte nur waehrend der Einrichtung moeglich sein; der Reverse-Proxy beziehungsweise die Firewall muss den Zugriff auf bekannte Heimnetz-Clients beschraenken.
