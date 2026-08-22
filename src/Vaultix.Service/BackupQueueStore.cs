@@ -155,6 +155,31 @@ public sealed class BackupQueueStore(VaultixPaths paths)
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task ResetForServerChangeAsync(CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using (var clearQueue = connection.CreateCommand())
+        {
+            clearQueue.Transaction = (SqliteTransaction)transaction;
+            clearQueue.CommandText = "DELETE FROM backup_queue WHERE run_id IN (SELECT id FROM backup_runs WHERE state='Active');";
+            await clearQueue.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+        await using (var resetRuns = connection.CreateCommand())
+        {
+            resetRuns.Transaction = (SqliteTransaction)transaction;
+            resetRuns.CommandText = "UPDATE backup_runs SET scan_completed=0,snapshot_created=0 WHERE state='Active';";
+            await resetRuns.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+        await using (var clearVersions = connection.CreateCommand())
+        {
+            clearVersions.Transaction = (SqliteTransaction)transaction;
+            clearVersions.CommandText = "DELETE FROM file_versions;";
+            await clearVersions.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task RetryFailedRunAsync(Guid runId, CancellationToken cancellationToken)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);

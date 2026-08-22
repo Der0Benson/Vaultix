@@ -63,9 +63,13 @@ public sealed class BackupCoordinator(
                 ProtectedDeviceSecret = ServiceConfigurationStore.ProtectSecret(pairing.DeviceSecret)
             };
             await SaveConfigurationAsync(updated, cancellationToken).ConfigureAwait(false);
-            if (!sameServer) await queue.RequeueActiveRunsAsync(cancellationToken).ConfigureAwait(false);
+            await queue.ResetForServerChangeAsync(cancellationToken).ConfigureAwait(false);
             server.Configure(uri, new DeviceCredentials(pairing.DeviceId, pairing.DeviceSecret));
+            state.SetSnapshots([]);
+            state.SetNextSnapshot(null);
+            foreach (var folder in updated.Folders.Where(folder => folder.Enabled)) RequestBackup(folder.Id);
             state.SetServer(true);
+            state.AddActivity("Info", "Server gewechselt â€“ Dateien werden vollstÃ¤ndig abgeglichen");
             state.AddActivity("Success", "Vaultix Server verbunden");
         }
         finally
