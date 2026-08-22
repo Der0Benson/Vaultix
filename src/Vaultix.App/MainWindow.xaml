@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Vaultix.App"
         xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
         mc:Ignorable="d"
-        Title="Vaultix" Height="820" Width="1320" MinHeight="680" MinWidth="1040"
+        Title="Vaultix" Icon="Assets/vaultix.ico" Height="820" Width="1320" MinHeight="680" MinWidth="1040"
         WindowStartupLocation="CenterScreen" Background="{StaticResource BackgroundBrush}">
     <Window.Resources>
         <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">

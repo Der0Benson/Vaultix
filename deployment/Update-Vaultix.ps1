@@ -13,3 +13,8 @@ if (& git -C $repository status --porcelain) { throw 'The repository has local c
 & git -C $repository pull --ff-only origin $Branch
 if ($LASTEXITCODE -ne 0) { throw 'Git update failed.' }
 & (Join-Path $PSScriptRoot 'Install-Vaultix.ps1') -RepositoryPath $repository
+if ($LASTEXITCODE -ne 0) { throw 'Vaultix installation after the update failed.' }
+
+$appExecutable = Join-Path $env:ProgramFiles 'Vaultix\app\Vaultix.App.exe'
+if (-not (Test-Path -LiteralPath $appExecutable)) { throw "Updated Vaultix app was not found: $appExecutable" }
+Start-Process -FilePath $appExecutable
